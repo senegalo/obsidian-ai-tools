@@ -1,20 +1,56 @@
-# Obsidian Sample Plugin
+# AI Tools for Obsidian
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+AI Tools is a powerful plugin for Obsidian, leveraging the capabilities of OpenAI's gpt-3.5-turbo to enhance your note-taking and knowledge management experience. The plugin offers a set of commands that use custom prompts to perform various tasks, currently featuring a "Summarize Note" command that condenses your notes into concise bullet points.
 
-This project uses Typescript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in Typescript Definition format, which contains TSDoc comments describing what it does.
+## Features
 
-**Note:** The Obsidian API is still in early alpha and is subject to change at any time!
+- **Summarize Note**: This command takes the entire content of a note and uses the power of gpt-3.5-turbo to summarize it into digestible bullet points. This is particularly useful for quickly understanding the key points of lengthy or complex notes.
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+- **Customizable Settings**: You can customize the behavior of the AI model by setting the API key and the "temperature" of the model in the plugin settings. The temperature parameter controls the randomness of the AI's output: a value of 0 makes the output deterministic and consistent, while a value of 2 makes the output highly diverse and unpredictable.
 
-## First time developing plugins?
+## Installation
+
+1. In Obsidian, open Settings > Third-party plugin
+2. Disable Safe mode
+3. Click Browse community plugins
+4. Search for "AI Tools"
+5. Click Install
+6. After installation, activate the plugin in Settings > Third-party plugins
+
+## Usage
+
+After installation and activation, you can use the "Summarize Note" command by:
+
+1. Opening the command palette with `Ctrl+P` (or `Cmd+P` on macOS)
+2. Typing "Summarize Note" and hitting `Enter`
+
+## Configuration
+
+To configure the plugin:
+
+1. Go to Settings > Third-party plugins > AI Tools
+2. Enter your OpenAI API key
+3. Set the temperature parameter as per your preference
+
+## Contributing
+
+This plugin is open source and contributions are welcome. Feel free to fork the repository, make your changes, and submit a pull request.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Disclaimer
+
+This plugin uses OpenAI's gpt-3.5-turbo, which may incur costs on your OpenAI account. Please use responsibly and be aware of OpenAI's pricing details.
+
+## Support
+
+If you encounter any problems or have suggestions, please open an issue on the GitHub repository.
+
+## Developer Notes
+
+### First time developing plugins?
 
 Quick starting guide for new plugin devs:
 
@@ -28,7 +64,7 @@ Quick starting guide for new plugin devs:
 - Enable plugin in settings window.
 - For updates to the Obsidian API run `npm update` in the command line under your repo folder.
 
-## Releasing new releases
+### Releasing new releases
 
 - Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
 - Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
@@ -39,24 +75,10 @@ Quick starting guide for new plugin devs:
 > You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
 > The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
 
-## Adding your plugin to the community plugin list
-
-- Check https://github.com/obsidianmd/obsidian-releases/blob/master/plugin-review.md
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
-
-## How to use
-
-- Clone this repo.
-- `npm i` or `yarn` to install dependencies
-- `npm run dev` to start compilation in watch mode.
-
-## Manually installing the plugin
-
+### Manually installing the plugin
 - Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
 
-## Improve code quality with eslint (optional)
+### Improve code quality with eslint (optional)
 - [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
 - To use eslint with this project, make sure to install eslint from terminal:
   - `npm install -g eslint`
@@ -66,30 +88,6 @@ Quick starting guide for new plugin devs:
 - If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
   - `eslint .\src\`
 
-## Funding URL
+---
 
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
-
-If you have multiple URLs, you can also do:
-
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
-
-## API Documentation
-
-See https://github.com/obsidianmd/obsidian-api
+Enjoy using AI Tools for Obsidian!
