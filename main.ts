@@ -30,7 +30,6 @@ export default class MyPlugin extends Plugin {
 			editorCallback: async (editor: Editor) => {
 				const summary = await this.summarize(editor.getValue())
 				const lineCount = editor.lineCount();
-				console.log(summary);
 				editor.replaceRange(summary, {line: lineCount, ch: 0})
 			}
 		});
@@ -42,7 +41,6 @@ export default class MyPlugin extends Plugin {
 			editorCallback: async (editor: Editor) => {
 				const summary = await this.summarize(editor.getSelection())
 				const lineCount = editor.lineCount();
-				console.log(summary);
 				editor.replaceRange(summary, { line: lineCount, ch: 0 })
 			}
 		});
@@ -70,7 +68,6 @@ export default class MyPlugin extends Plugin {
 			model: "gpt-3.5-turbo",
 			messages: [{ role: "user", content: prompt }],
 		}).then((r) => {
-			console.log(r);
 			return this.settings.summaryResultPrefix+r.data.choices.first()?.message?.content
 		}).catch(e => {
 			console.error(e);
