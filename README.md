@@ -1,10 +1,12 @@
 # AI Tools for Obsidian
 
-AI Tools is a powerful plugin for Obsidian, leveraging the capabilities of OpenAI's gpt-3.5-turbo to enhance your note-taking and knowledge management experience. The plugin offers a set of commands that use custom prompts to perform various tasks, currently featuring a "Summarize Note" command that condenses your notes into concise bullet points.
+AI Tools is a robust plugin for Obsidian, utilizing the power of OpenAI's gpt-3.5-turbo to enhance your note-taking and knowledge management experience. The plugin offers a set of commands that use custom prompts to perform various tasks, currently featuring two commands: "Summarize Note" and "Summarize Selection".
 
 ## Features
 
-- **Summarize Note**: This command takes the entire content of a note and uses the power of gpt-3.5-turbo to summarize it into digestible bullet points. This is particularly useful for quickly understanding the key points of lengthy or complex notes.
+- **Summarize Note**: This command allows you to generate a concise summary of the entire note. It's perfect for quickly grasping the main points of lengthy or complex notes.
+
+- **Summarize Selection**: This command enables you to create a summary of a specific text selection within your note. Ideal for focusing on key details in a particular section or paragraph.
 
 - **Customizable Settings**: You can customize the behavior of the AI model by setting the API key and the "temperature" of the model in the plugin settings. The temperature parameter controls the randomness of the AI's output: a value of 0 makes the output deterministic and consistent, while a value of 2 makes the output highly diverse and unpredictable.
 
@@ -19,18 +21,26 @@ AI Tools is a powerful plugin for Obsidian, leveraging the capabilities of OpenA
 
 ## Usage
 
-After installation and activation, you can use the "Summarize Note" command by:
+After installation and activation, you can use the "Summarize Note" and "Summarize Selection" commands by:
 
 1. Opening the command palette with `Ctrl+P` (or `Cmd+P` on macOS)
-2. Typing "Summarize Note" and hitting `Enter`
+2. Typing the command name and hitting `Enter`
 
 ## Configuration
 
 To configure the plugin:
 
 1. Go to Settings > Third-party plugins > AI Tools
-2. Enter your OpenAI API key
-3. Set the temperature parameter as per your preference
+
+### General Settings
+
+- **OpenAI API Key**: Enter your OpenAI API Key here. This key is required to enable the AI functionalities of the plugin.
+- **Model Randomness (Temperature)**: Adjust the randomness of the AI model's responses. A lower value (closer to 0) makes the output more deterministic and focused, while a higher value (up to 2) increases creativity and diversity in the output.
+
+### Summarization Settings
+
+- **Summarization Prompt**: Define the prompt that is sent along with the text for summarization. This prompt guides the AI in generating the summary.
+- **Summary Prefix**: Specify a prefix that will be added before the summary result. This can be used to clearly indicate the start of the AI-generated summary.
 
 ## Contributing
 
