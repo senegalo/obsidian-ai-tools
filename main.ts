@@ -1,4 +1,4 @@
-import { App, Editor, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, Plugin, PluginSettingTab, Setting, Notice } from 'obsidian';
 import { Configuration, OpenAIApi } from "openai";
 
 // Remember to rename these classes and interfaces!
@@ -13,7 +13,7 @@ interface AIToolsSettings {
 const DEFAULT_SETTINGS: AIToolsSettings = {
 	openaiAPIKey: '',
 	randomness: 1,
-	summarizePrompt: "summarize the following notes into a series of points. The output format should just be summary in markdown format:",
+	summarizePrompt: "summarize the following notes into a series of points. The output format should just be summary in markdown format without any titles of prefixes:",
 	summaryResultPrefix: "\n\n---\n\n## Summary\n\n"
 }
 
@@ -28,9 +28,11 @@ export default class MyPlugin extends Plugin {
 			id: 'ai-tools-summarize-note',
 			name: 'Summarize Note',
 			editorCallback: async (editor: Editor) => {
+				const notice = new Notice("AI Tools -> Summarizing...");
 				const summary = await this.summarize(editor.getValue())
 				const lineCount = editor.lineCount();
 				editor.replaceRange(summary, {line: lineCount, ch: 0})
+				notice.hide();
 			}
 		});
 
@@ -39,9 +41,11 @@ export default class MyPlugin extends Plugin {
 			id: 'ai-tools-summarize-selection',
 			name: 'Summarize Selection',
 			editorCallback: async (editor: Editor) => {
+				const notice = new Notice("AI Tools -> Summarizing...");
 				const summary = await this.summarize(editor.getSelection())
 				const lineCount = editor.lineCount();
 				editor.replaceRange(summary, { line: lineCount, ch: 0 })
+				notice.hide();
 			}
 		});
 
