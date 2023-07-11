@@ -8,6 +8,8 @@ AI Tools is a robust plugin for Obsidian, utilizing the power of OpenAI's gpt-3.
 
 - **Summarize Selection**: This command enables you to create a summary of a specific text selection within your note. Ideal for focusing on key details in a particular section or paragraph.
 
+- **Use Selection As Prompt**: This command enables you to use a specific text selection within your note as an input prompt to the model.
+
 - **Customizable Settings**: You can customize the behavior of the AI model by setting the API key and the "temperature" of the model in the plugin settings. The temperature parameter controls the randomness of the AI's output: a value of 0 makes the output deterministic and consistent, while a value of 2 makes the output highly diverse and unpredictable.
 
 ## Installation
@@ -21,7 +23,7 @@ AI Tools is a robust plugin for Obsidian, utilizing the power of OpenAI's gpt-3.
 
 ## Usage
 
-After installation and activation, you can use the "Summarize Note" and "Summarize Selection" commands by:
+After installation and activation, you can use the "Summarize Note", "Summarize Selection" and "Use Selection as Prompt" commands by:
 
 1. Opening the command palette with `Ctrl+P` (or `Cmd+P` on macOS)
 2. Typing the command name and hitting `Enter`

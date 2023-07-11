@@ -49,6 +49,19 @@ export default class MyPlugin extends Plugin {
 			}
 		});
 
+		// This adds the use selection as prompt
+		this.addCommand({
+			id: 'ai-tools-selection-as-prompt',
+			name: 'Use Selection as Prompt',
+			editorCallback: async (editor: Editor) => {
+				const notice = new Notice("AI Tools -> Processing...");
+				const result = await this.selectionAsPrompt(editor.getSelection())
+				const lineCount = editor.lineCount();
+				editor.replaceRange(result, { line: lineCount, ch: 0 })
+				notice.hide();
+			}
+		});
+
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new AIToolsSettingsTab(this.app, this));
 	}
@@ -67,6 +80,20 @@ export default class MyPlugin extends Plugin {
 
 	async summarize(content: string): Promise<string> {
 		const prompt = this.settings.summarizePrompt + "\n" + content;
+		const openai = this.loadOpenAI();
+		return openai.createChatCompletion({
+			model: "gpt-3.5-turbo",
+			messages: [{ role: "user", content: prompt }],
+		}).then((r) => {
+			return this.settings.summaryResultPrefix+r.data.choices.first()?.message?.content
+		}).catch(e => {
+			console.error(e);
+			return "";
+		});
+	}
+
+	async selectionAsPrompt(content: string): Promise<string> {
+		const prompt = content;
 		const openai = this.loadOpenAI();
 		return openai.createChatCompletion({
 			model: "gpt-3.5-turbo",
