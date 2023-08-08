@@ -247,6 +247,19 @@ class AIToolsSettingsTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
+		.setName('Model Used')
+		.setDesc('Which openai model to use to fully the commands.')
+			.addDropdown(dd => {
+				dd.addOption("gpt-3.5-turbo", "gpt-3.5-turbo")
+				dd.addOption("gpt-3.5-turbo-16k", "gpt-3.5-turbo-16k")
+				dd.setValue(this.plugin.settings.model)
+				dd.onChange(async (value) => {
+					this.plugin.settings.model = value
+					await this.plugin.saveSettings();
+				})
+		})
+
+		new Setting(containerEl)
 			.setName('Model Randomness (Temperature)')
 			.setDesc("Adjust the randomness of the AI model's responses. A lower value (closer to 0) makes the output more deterministic and focused, while a higher value (up to 2) increases creativity and diversity in the output.")
 			.addSlider(slider =>
