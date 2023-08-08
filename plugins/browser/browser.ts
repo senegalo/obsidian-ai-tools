@@ -1,15 +1,23 @@
-import { Notice, requestUrl } from "obsidian"
+import AITools from "main";
+import { App, Notice, requestUrl } from "obsidian"
 import { ChatCompletionFunctions, ChatCompletionRequestMessageFunctionCall, OpenAIApi } from "openai"
+import { URLSearchParams } from "url";
 
 export class InternalBrowser {
 
 	static BROWSE_URL = "http://localhost:80/chat-gpt/browse.php"
+	
+	mainPlugin: AITools
 
-	static async getWebpage(openai: OpenAIApi, params: ChatCompletionRequestMessageFunctionCall): Promise<string> {
+	constructor(mainPlugin: AITools) {
+		this.mainPlugin = mainPlugin;
+	}
+
+	async getWebpage(params: ChatCompletionRequestMessageFunctionCall): Promise<string> {
 		const paramsParsed = JSON.parse(params.arguments)
 		const notice = new Notice("AI Tools -> Scraping " + paramsParsed.url, 0);
 		const request = await requestUrl({
-			url: this.BROWSE_URL,
+			url: InternalBrowser.BROWSE_URL,
 			contentType: "Content-Type: application/json",
 			body: params.arguments,
 			method: "POST"
@@ -19,7 +27,35 @@ export class InternalBrowser {
 		return text
 	}
 
-	static funcs(): ChatCompletionFunctions[] {
+	async googleSearch(params:ChatCompletionRequestMessageFunctionCall): Promise<string>{
+		const paramsParsed = JSON.parse(params.arguments)
+		const notice = new Notice(`AI Tools -> Searching using keyword: ${paramsParsed.keyword}`, 0);
+		const url = new URL('https://customsearch.googleapis.com/customsearch/v1');
+		const searchParams = new URLSearchParams();
+		searchParams.set("cx", this.mainPlugin.settings.googleSearchCX)
+		searchParams.set("q", paramsParsed.keyword)
+		searchParams.set("key", this.mainPlugin.settings.googleSearchKey);
+		url.search = searchParams.toString();
+		const request = await requestUrl({
+			url: url.toString(),
+			method: "GET",
+			headers: {"Accept": "application/json"}
+		})
+		const results = request.json
+		const out = [];
+		results.items.forEach(element => {
+			const result = {
+				title: element.title,
+				link: element.link,
+				snippet: element.snippet
+			}
+			out.push(result);
+		});
+		notice.hide();
+		return JSON.stringify(out);
+	}
+
+	funcs(): ChatCompletionFunctions[] {
 		return [
 			{
 				name: "getWebpage",

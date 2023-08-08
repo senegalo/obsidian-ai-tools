@@ -11,16 +11,14 @@ interface AIToolsSettings {
 	summaryResultPrefix: string;
 	model: string;
 	chatMessagesSeparator: string;
-}
-
-type APIChatCompleteionResponse = {
-	output: string;
-	response: CreateChatCompletionResponse
+	googleSearchCX: string;
+	googleSearchKey: string;
 }
 
 const NEW_LINE = "\n\n";
 const LINE_SEP = "---";
 const H1 = "# ";
+const MODELS = ["gpt-3.5-turbo", "gpt-3.5-turbo-16k"]
 
 const DEFAULT_SETTINGS: AIToolsSettings = {
 	openaiAPIKey: '',
@@ -28,22 +26,38 @@ const DEFAULT_SETTINGS: AIToolsSettings = {
 	summarizePrompt: "summarize the following notes into a series of points. The output format should just be summary in markdown format without any titles of prefixes:",
 	summaryResultPrefix: NEW_LINE + LINE_SEP + NEW_LINE + H1 + "Summary" + NEW_LINE,
 	model: "gpt-3.5-turbo",
-	chatMessagesSeparator: LINE_SEP
+	chatMessagesSeparator: LINE_SEP,
+	googleSearchCX: "",
+	googleSearchKey: ""
 }
 
-export default class MyPlugin extends Plugin {
+export default class AITools extends Plugin {
 	settings: AIToolsSettings;
 
 	functions: ChatCompletionFunctions[] = []
 
+	internalBrowser: InternalBrowser
+
+	statusBar: HTMLElement
+
 	async onload() {
+
+		this.statusBar = this.addStatusBarItem();
+
 		await this.loadSettings();
 
-		/** @todo make it dynamically go and fetch all internal plugins*/
-		this.functions = this.functions.concat(InternalBrowser.funcs());
+		this.updateStatusBar();
 
-		console.log(this.functions);
-		
+		this.addRibbonIcon("dice", "Switch Model", async () => {
+			const currentModelIndex = MODELS.indexOf(this.settings.model)
+			this.settings.model = MODELS[(currentModelIndex+1)%MODELS.length]
+			await this.saveSettings()
+			this.updateStatusBar()
+		});
+
+		/** @todo make it dynamically go and fetch all internal plugins*/
+		this.internalBrowser = new InternalBrowser(this);
+		this.functions = this.functions.concat(this.internalBrowser.funcs());
 
 		// This adds the summarize whole note 
 		this.addCommand({
@@ -89,9 +103,7 @@ export default class MyPlugin extends Plugin {
 			id: 'ai-tools-complete-chat',
 			name: 'Complete the current chat',
 			editorCallback: async (editor: Editor) => {
-				const notice = new Notice("AI Tools -> Processing...", 0);
 				await this.getChatCompletion(editor)
-				notice.hide();
 			}
 		});
 
@@ -101,6 +113,11 @@ export default class MyPlugin extends Plugin {
 
 	onunload() {
 
+	}
+
+	updateStatusBar(){
+		this.statusBar.firstChild?.remove();
+		this.statusBar.createEl("span", { text: `OpenAI Model: ${this.settings.model}`});
 	}
 
 	async loadSettings() {
@@ -145,10 +162,8 @@ export default class MyPlugin extends Plugin {
 		const choice = previousResponse.choices.first();
 		const functionCall = choice?.message?.function_call
 
-		const openai = this.loadOpenAI();
-
 		/** @todo make this more dynamic in case we have more plugins **/
-		const functionResponse = await InternalBrowser[functionCall.name](openai, functionCall)
+		const functionResponse = await this.internalBrowser[functionCall.name](functionCall)
 
 		const lineCount = editor.lineCount();
 		editor.replaceRange(this.buildMessage("function:"+functionCall.name, functionResponse), { line: lineCount, ch: 0 })
@@ -175,19 +190,29 @@ export default class MyPlugin extends Plugin {
 	}
 
 	async getChatCompletion(editor: Editor, loops = 0): Promise<undefined> {
+		const notice = new Notice("AI Tools -> Processing...", 0);
 		const content = editor.getValue();
 		const messages = this.getMessages(content);
 		const openai = this.loadOpenAI();
+		const lineCount = editor.lineCount();
 
 		const response = await openai.createChatCompletion({
 			model: this.settings.model,
 			messages: messages,
 			functions: this.functions
+		}).catch(reason => {
+			console.error(reason.response);
+			const message = this.buildMessage("PluginError", JSON.stringify(reason.response.data))
+			editor.replaceRange(message, { line: lineCount, ch: 0 })
+			notice.hide();
+			return false;
 		});
 
-		const choice = response.data.choices.first();
+		if(!response) {
+			notice.hide();
+		}
 
-		const lineCount = editor.lineCount();
+		const choice = response.data.choices.first();
 		const message = choice?.message;
 
 		if (message?.function_call) {
@@ -201,6 +226,7 @@ export default class MyPlugin extends Plugin {
 			const editorOutput = this.buildMessage("assistant", message?.content);
 			editor.replaceRange(editorOutput , { line: lineCount, ch: 0 })
 		}
+		notice.hide();
 	}
 
 	private buildMessage(role: string, message: string): string {
@@ -221,9 +247,9 @@ export default class MyPlugin extends Plugin {
 }
 
 class AIToolsSettingsTab extends PluginSettingTab {
-	plugin: MyPlugin;
+	plugin: AITools;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: AITools) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -250,8 +276,9 @@ class AIToolsSettingsTab extends PluginSettingTab {
 		.setName('Model Used')
 		.setDesc('Which openai model to use to fully the commands.')
 			.addDropdown(dd => {
-				dd.addOption("gpt-3.5-turbo", "gpt-3.5-turbo")
-				dd.addOption("gpt-3.5-turbo-16k", "gpt-3.5-turbo-16k")
+				MODELS.forEach(model => {
+					dd.addOption(model, model)
+				})
 				dd.setValue(this.plugin.settings.model)
 				dd.onChange(async (value) => {
 					this.plugin.settings.model = value
@@ -269,6 +296,31 @@ class AIToolsSettingsTab extends PluginSettingTab {
 						this.plugin.settings.randomness = value;
 						await this.plugin.saveSettings();
 					}).setDynamicTooltip());
+
+
+		containerEl.createEl('h2', { text: 'Google Custom Search settings' });
+
+		new Setting(containerEl)
+		.setName('Search Engine ID (CX)')
+		.setDesc('The search engine id from the Google programmable search engine dashboard.')
+		.addText(text => 
+			text.setPlaceholder('')
+			.setValue(this.plugin.settings.googleSearchCX)
+			.onChange(async(value) => {
+				this.plugin.settings.googleSearchCX = value;
+				await this.plugin.saveSettings();
+			}));
+
+		new Setting(containerEl)
+		.setName('Search Engine Key')
+		.setDesc('The search engine secret key from the Google programmable search engine dashboard.')
+		.addText(text => 
+			text.setPlaceholder('')
+			.setValue(this.plugin.settings.googleSearchKey)
+			.onChange(async(value) => {
+				this.plugin.settings.googleSearchKey = value;
+				await this.plugin.saveSettings();
+			}));
 
 		containerEl.createEl('h2', { text: 'Summarization Settings' });
 
