@@ -1,4 +1,4 @@
-import { App, Editor, Plugin, PluginSettingTab, Setting, Notice } from 'obsidian';
+import { App, Editor, Plugin, PluginSettingTab, Setting, Notice, MarkdownView } from 'obsidian';
 import { ChatCompletionFunctions, ChatCompletionRequestMessage, ChatCompletionResponseMessage, Configuration, CreateChatCompletionResponse, OpenAIApi } from "openai";
 import { InternalBrowser } from 'plugins/browser/browser';
 
@@ -53,6 +53,25 @@ export default class AITools extends Plugin {
 			this.settings.model = MODELS[(currentModelIndex+1)%MODELS.length]
 			await this.saveSettings()
 			this.updateStatusBar()
+		});
+
+		this.addRibbonIcon("bot", "Complete current chat", async () => {
+			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+			this.getChatCompletion(view?.editor)
+		});
+
+		this.addRibbonIcon("message-square-plus", "Create chat message", async () => {
+			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+			const lineCount = view.editor.lineCount();
+			const message = []
+			if(lineCount > 1){
+				message.push(NEW_LINE)
+				message.push(this.settings.chatMessagesSeparator)
+				message.push(NEW_LINE)
+			}
+			message.push( H1 + 'User')
+			message.push(NEW_LINE)
+			view.editor.replaceRange(message.join(''), { line: lineCount, ch: 0 })
 		});
 
 		/** @todo make it dynamically go and fetch all internal plugins*/
