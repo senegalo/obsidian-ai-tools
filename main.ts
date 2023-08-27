@@ -68,8 +68,9 @@ export default class AITools extends Plugin {
 		});
 
 		/** @todo make it dynamically go and fetch all internal plugins*/
-		this.internalBrowser = new InternalBrowser(this);
-		this.functions = this.functions.concat(this.internalBrowser.funcs());
+		
+		//this.internalBrowser = new InternalBrowser(this);
+		//this.functions = this.functions.concat(this.internalBrowser.funcs());
 
 		// This adds the summarize whole note 
 		this.addCommand({
@@ -123,8 +124,8 @@ export default class AITools extends Plugin {
 		this.addCommand({
 			id: 'ai-tools-create-chat',
 			name: 'Create a new chat in the current note',
-			editorCallback: async (editor: Editor) => {
-				await this.createNewChat();
+			editorCallback: (editor: Editor) => {
+				this.createNewChat();
 			}
 		});
 
@@ -232,7 +233,7 @@ export default class AITools extends Plugin {
 		const response = await openai.createChatCompletion({
 			model: this.settings.model,
 			messages: messages,
-			functions: this.functions
+			//functions: this.functions
 		}).catch(reason => {
 			console.error(reason.response);
 			const message = this.buildMessage("PluginError", JSON.stringify(reason.response.data))
