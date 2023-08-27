@@ -1,7 +1,16 @@
 import AITools from "main";
-import { App, Notice, requestUrl } from "obsidian"
-import { ChatCompletionFunctions, ChatCompletionRequestMessageFunctionCall, OpenAIApi } from "openai"
+import { Notice, requestUrl } from "obsidian"
+import { ChatCompletionFunctions, ChatCompletionRequestMessageFunctionCall} from "openai"
 import { URLSearchParams } from "url";
+
+
+
+export type SearchResponse = {
+	title: string;
+	link: string;
+	snippet: string;
+}
+
 
 export class InternalBrowser {
 
@@ -14,6 +23,11 @@ export class InternalBrowser {
 	}
 
 	async getWebpage(params: ChatCompletionRequestMessageFunctionCall): Promise<string> {
+		
+		if(!params.arguments){
+			return new Promise(() => "");
+		}
+
 		const paramsParsed = JSON.parse(params.arguments)
 		const notice = new Notice("AI Tools -> Scraping " + paramsParsed.url, 0);
 		const request = await requestUrl({
@@ -28,6 +42,9 @@ export class InternalBrowser {
 	}
 
 	async googleSearch(params:ChatCompletionRequestMessageFunctionCall): Promise<string>{
+		if (!params.arguments) {
+			return new Promise(() => "");
+		}
 		const paramsParsed = JSON.parse(params.arguments)
 		const notice = new Notice(`AI Tools -> Searching using keyword: ${paramsParsed.keyword}`, 0);
 		const url = new URL('https://customsearch.googleapis.com/customsearch/v1');
@@ -41,8 +58,8 @@ export class InternalBrowser {
 			method: "GET",
 			headers: {"Accept": "application/json"}
 		})
-		const results = request.json
-		const out = [];
+		const results: {items: SearchResponse[]} = request.json
+		const out: SearchResponse[] = [];
 		results.items.forEach(element => {
 			const result = {
 				title: element.title,

@@ -1,6 +1,6 @@
 import { create } from 'domain';
 import { App, Editor, Plugin, PluginSettingTab, Setting, Notice, MarkdownView } from 'obsidian';
-import { ChatCompletionFunctions, ChatCompletionRequestMessage, ChatCompletionResponseMessage, Configuration, CreateChatCompletionResponse, OpenAIApi } from "openai";
+import { ChatCompletionFunctions, ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum, ChatCompletionResponseMessage, Configuration, CreateChatCompletionResponse, OpenAIApi } from "openai";
 import { InternalBrowser } from 'plugins/browser/browser';
 
 // Remember to rename these classes and interfaces!
@@ -58,11 +58,13 @@ export default class AITools extends Plugin {
 
 		this.addRibbonIcon("bot", "Complete current chat", async () => {
 			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-			this.getChatCompletion(view?.editor)
+			if(view){
+				this.getChatCompletion(view.editor)
+			}
 		});
 
-		this.addRibbonIcon("message-square-plus", "Create chat message", async () => {
-			await this.createNewChat();	
+		this.addRibbonIcon("message-square-plus", "Create chat message", () => {
+			this.createNewChat();	
 		});
 
 		/** @todo make it dynamically go and fetch all internal plugins*/
@@ -181,11 +183,21 @@ export default class AITools extends Plugin {
 		const choice = previousResponse.choices.first();
 		const functionCall = choice?.message?.function_call
 
-		/** @todo make this more dynamic in case we have more plugins **/
-		const functionResponse = await this.internalBrowser[functionCall.name](functionCall)
-
-		const lineCount = editor.lineCount();
-		editor.replaceRange(this.buildMessage("function:"+functionCall.name, functionResponse), { line: lineCount, ch: 0 })
+		if (functionCall && functionCall.name) {
+			/** @todo make this more dynamic in case we have more plugins **/
+			let functionResponse;
+			if (functionCall.name == "googleSearch") {
+				functionResponse = await this.internalBrowser.googleSearch(functionCall)
+			} else if (functionCall.name == "getWebpage") {
+				functionResponse = await this.internalBrowser.getWebpage(functionCall)
+			}
+			if (functionResponse) {
+				const lineCount = editor.lineCount();
+				editor.replaceRange(this.buildMessage("function:" + functionCall.name, functionResponse), { line: lineCount, ch: 0 })
+			}
+		} else {
+			return new Promise(() => { return undefined });
+		}
 	}
 
 	private getMessages(content: string): ChatCompletionRequestMessage[] {
@@ -199,12 +211,14 @@ export default class AITools extends Plugin {
 			const roleStr: string = roleLine.split(H1)[1];
 			const role = roleStr;
 			const content: string = messageLines.slice(indexOfRoleLine+1).join(NEW_LINE).trim();
+			const out: ChatCompletionRequestMessage[] = []
 			if(role.startsWith("function")){
 				const roleSplit = role.split(":");
-				return [{ role: roleSplit[0], name: roleSplit[1], content: content}]
+				out.push({ role: roleSplit[0] as ChatCompletionRequestMessageRoleEnum, name: roleSplit[1], content: content})
 			} else {
-				return [{ role: role, content: content }]
+				out.push({ role: role as ChatCompletionRequestMessageRoleEnum, content: content })
 			}
+			return out;
 		})
 	}
 
@@ -231,37 +245,43 @@ export default class AITools extends Plugin {
 			notice.hide();
 		}
 
-		const choice = response.data.choices.first();
-		const message = choice?.message;
-
-		if (message?.function_call) {
-			const editorOutput = this.buildMessage("assistant", JSON.stringify(message.function_call));
-			editor.replaceRange(editorOutput, { line: lineCount, ch: 0 })
-			await this.handleFunctionCall(response.data, editor);
-			if(loops < 5){
-				await this.getChatCompletion(editor, loops+1);
+		if (typeof response != "boolean") {
+			const choice = response.data.choices.first();
+			if (choice && choice.message) {
+			const message = choice.message;
+				if (message?.function_call) {
+					const editorOutput = this.buildMessage("assistant", JSON.stringify(message.function_call));
+					editor.replaceRange(editorOutput, { line: lineCount, ch: 0 })
+					await this.handleFunctionCall(response.data, editor);
+					if (loops < 5) {
+						await this.getChatCompletion(editor, loops + 1);
+					}
+				} else if (message.content) {
+					const editorOutput = this.buildMessage("assistant", message.content);
+					editor.replaceRange(editorOutput, { line: lineCount, ch: 0 })
+				}
+				notice.hide();
 			}
-		} else {
-			const editorOutput = this.buildMessage("assistant", message?.content);
-			editor.replaceRange(editorOutput , { line: lineCount, ch: 0 })
 		}
-		notice.hide();
+		return new Promise(() => {});
 	}
 
-	private async createNewChat() {
+	private createNewChat() {
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		const lineCount = view?.editor.lineCount();
 		const message = []
-		if (lineCount > 1) {
+		if (lineCount) {
+			if (lineCount > 1) {
+				message.push(NEW_LINE)
+				message.push(this.settings.chatMessagesSeparator)
+				message.push(NEW_LINE)
+			}
+			message.push(H1 + 'User')
 			message.push(NEW_LINE)
-			message.push(this.settings.chatMessagesSeparator)
-			message.push(NEW_LINE)
+			view?.editor.replaceRange(message.join(''), { line: lineCount, ch: 0 })
+			view?.editor.setCursor(view.editor.lineCount());
+			view?.editor.focus();
 		}
-		message.push(H1 + 'User')
-		message.push(NEW_LINE)
-		view?.editor.replaceRange(message.join(''), { line: lineCount, ch: 0 })
-		view?.editor.setCursor(view.editor.lineCount());
-		view?.editor.focus();
 	}
 
 	private buildMessage(role: string, message: string): string {
