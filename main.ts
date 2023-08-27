@@ -1,3 +1,4 @@
+import { create } from 'domain';
 import { App, Editor, Plugin, PluginSettingTab, Setting, Notice, MarkdownView } from 'obsidian';
 import { ChatCompletionFunctions, ChatCompletionRequestMessage, ChatCompletionResponseMessage, Configuration, CreateChatCompletionResponse, OpenAIApi } from "openai";
 import { InternalBrowser } from 'plugins/browser/browser';
@@ -61,17 +62,7 @@ export default class AITools extends Plugin {
 		});
 
 		this.addRibbonIcon("message-square-plus", "Create chat message", async () => {
-			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-			const lineCount = view.editor.lineCount();
-			const message = []
-			if(lineCount > 1){
-				message.push(NEW_LINE)
-				message.push(this.settings.chatMessagesSeparator)
-				message.push(NEW_LINE)
-			}
-			message.push( H1 + 'User')
-			message.push(NEW_LINE)
-			view.editor.replaceRange(message.join(''), { line: lineCount, ch: 0 })
+			await this.createNewChat();	
 		});
 
 		/** @todo make it dynamically go and fetch all internal plugins*/
@@ -123,6 +114,15 @@ export default class AITools extends Plugin {
 			name: 'Complete the current chat',
 			editorCallback: async (editor: Editor) => {
 				await this.getChatCompletion(editor)
+			}
+		});
+
+		// Creates a new chat
+		this.addCommand({
+			id: 'ai-tools-create-chat',
+			name: 'Create a new chat in the current note',
+			editorCallback: async (editor: Editor) => {
+				await this.createNewChat();
 			}
 		});
 
@@ -246,6 +246,22 @@ export default class AITools extends Plugin {
 			editor.replaceRange(editorOutput , { line: lineCount, ch: 0 })
 		}
 		notice.hide();
+	}
+
+	private async createNewChat() {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		const lineCount = view?.editor.lineCount();
+		const message = []
+		if (lineCount > 1) {
+			message.push(NEW_LINE)
+			message.push(this.settings.chatMessagesSeparator)
+			message.push(NEW_LINE)
+		}
+		message.push(H1 + 'User')
+		message.push(NEW_LINE)
+		view?.editor.replaceRange(message.join(''), { line: lineCount, ch: 0 })
+		view?.editor.setCursor(view.editor.lineCount());
+		view?.editor.focus();
 	}
 
 	private buildMessage(role: string, message: string): string {
