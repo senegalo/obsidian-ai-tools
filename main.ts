@@ -74,9 +74,7 @@ export default class AITools extends Plugin {
 			name: 'Use Selection as Prompt',
 			editorCallback: async (editor: Editor) => {
 				const notice = new Notice("AI Tools -> Processing...");
-				const result = await this.selectionAsPrompt(editor.getSelection())
-				const lineCount = editor.lineCount();
-				editor.replaceRange(result, { line: lineCount, ch: 0 })
+				await this.selectionAsPrompt(editor)
 				notice.hide();
 			}
 		});
@@ -95,7 +93,7 @@ export default class AITools extends Plugin {
 			id: 'ai-tools-create-chat',
 			name: 'Create a new chat in the current note',
 			editorCallback: async (editor: Editor) => {
-				await this.createNewChat();
+				this.createNewChat();
 			}
 		});
 
@@ -131,19 +129,21 @@ export default class AITools extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	async selectionAsPrompt(content: string): Promise<string> {
-		const prompt = content;
+	async selectionAsPrompt(editor: Editor): Promise<undefined> {
+		const prompt = editor.getSelection();
+		const editorSelection = editor.listSelections().first();
 
 		const openai = this.loadOpenAI();
-		return await openai.createChatCompletion({
+		const response = await openai.createChatCompletion({
 			model: this.settings.model,
 			messages: [{ role: "user", content: prompt }],
-		}).then((r) => {
-			return NEW_LINE + LINE_SEP + NEW_LINE + r.data.choices.first()?.message?.content
-		}).catch(e => {
-			console.error(e);
-			return "";
 		});
+		const results = response.data.choices.first()?.message?.content
+		if(results && editorSelection){
+			const line = editorSelection.anchor.line > editorSelection.head.line ? editorSelection.anchor.line : editorSelection.head.line; 
+			editor.replaceRange(NEW_LINE + LINE_SEP + NEW_LINE + results, { line: line+1, ch: 0 })
+		}
+		return new Promise(() => {return undefined})
 	}
 
 	async handleFunctionCall(previousResponse: CreateChatCompletionResponse, editor: Editor): Promise<undefined> {
