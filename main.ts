@@ -19,7 +19,7 @@ interface AIToolsSettings {
 const NEW_LINE = "\n\n";
 const LINE_SEP = "---";
 const H1 = "# ";
-const MODELS = ["gpt-3.5-turbo", "gpt-3.5-turbo-16k"]
+let MODELS = ["gpt-3.5-turbo", "gpt-3.5-turbo-16k"]
 
 const DEFAULT_SETTINGS: AIToolsSettings = {
 	openaiAPIKey: '',
@@ -46,6 +46,8 @@ export default class AITools extends Plugin {
 		this.statusBar = this.addStatusBarItem();
 
 		await this.loadSettings();
+
+		MODELS = await this.getAvailableModels();
 
 		this.updateStatusBar();
 
@@ -134,6 +136,17 @@ export default class AITools extends Plugin {
 
 	onunload() {
 
+	}
+
+	async getAvailableModels(): Promise<string[]> {
+		const models = await this.loadOpenAI().listModels()
+		return models.data.data.flatMap((model) => {
+			if(model.id.toLowerCase().contains("gpt")){
+				return [model.id];
+			} else {
+				return [];
+			}
+		})
 	}
 
 	updateStatusBar(){
