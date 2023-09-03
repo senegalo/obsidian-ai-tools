@@ -1,6 +1,5 @@
-import { create } from 'domain';
 import { App, Editor, Plugin, PluginSettingTab, Setting, Notice, MarkdownView } from 'obsidian';
-import { ChatCompletionFunctions, ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum, ChatCompletionResponseMessage, Configuration, CreateChatCompletionResponse, OpenAIApi } from "openai";
+import { ChatCompletionFunctions, ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum, Configuration, CreateChatCompletionResponse, OpenAIApi } from "openai";
 import { InternalBrowser } from 'plugins/browser/browser';
 
 // Remember to rename these classes and interfaces!
@@ -8,8 +7,6 @@ import { InternalBrowser } from 'plugins/browser/browser';
 interface AIToolsSettings {
 	openaiAPIKey: string;
 	randomness: number;
-	summarizePrompt: string;
-	summaryResultPrefix: string;
 	model: string;
 	chatMessagesSeparator: string;
 	googleSearchCX: string;
@@ -24,8 +21,6 @@ let MODELS = ["gpt-3.5-turbo", "gpt-3.5-turbo-16k"]
 const DEFAULT_SETTINGS: AIToolsSettings = {
 	openaiAPIKey: '',
 	randomness: 1,
-	summarizePrompt: "summarize the following notes into a series of points. The output format should just be summary in markdown format without any titles of prefixes:",
-	summaryResultPrefix: NEW_LINE + LINE_SEP + NEW_LINE + H1 + "Summary" + NEW_LINE,
 	model: "gpt-3.5-turbo",
 	chatMessagesSeparator: LINE_SEP,
 	googleSearchCX: "",
@@ -72,32 +67,6 @@ export default class AITools extends Plugin {
 		/** @todo make it dynamically go and fetch all internal plugins*/
 		this.internalBrowser = new InternalBrowser(this);
 		this.functions = this.functions.concat(this.internalBrowser.funcs());
-
-		// This adds the summarize whole note 
-		this.addCommand({
-			id: 'ai-tools-summarize-note',
-			name: 'Summarize Note',
-			editorCallback: async (editor: Editor) => {
-				const notice = new Notice("AI Tools -> Summarizing...");
-				const summary = await this.summarize(editor.getValue())
-				const lineCount = editor.lineCount();
-				editor.replaceRange(summary, { line: lineCount, ch: 0 })
-				notice.hide();
-			}
-		});
-
-		// This adds the summarize selection
-		this.addCommand({
-			id: 'ai-tools-summarize-selection',
-			name: 'Summarize Selection',
-			editorCallback: async (editor: Editor) => {
-				const notice = new Notice("AI Tools -> Summarizing...");
-				const summary = await this.summarize(editor.getSelection())
-				const lineCount = editor.lineCount();
-				editor.replaceRange(summary, { line: lineCount, ch: 0 })
-				notice.hide();
-			}
-		});
 
 		// This adds the use selection as prompt
 		this.addCommand({
@@ -162,21 +131,6 @@ export default class AITools extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	async summarize(content: string): Promise<string> {
-		const prompt = this.settings.summarizePrompt + "\n" + content;
-
-		const openai = this.loadOpenAI();
-		return await openai.createChatCompletion({
-			model: this.settings.model,
-			messages: [{ role: "user", content: prompt }],
-		}).then((r) => {
-			return this.settings.summaryResultPrefix + r.data.choices.first()?.message?.content
-		}).catch(e => {
-			console.error(e);
-			return "";
-		});
-	}
-
 	async selectionAsPrompt(content: string): Promise<string> {
 		const prompt = content;
 
@@ -185,7 +139,7 @@ export default class AITools extends Plugin {
 			model: this.settings.model,
 			messages: [{ role: "user", content: prompt }],
 		}).then((r) => {
-			return this.settings.summaryResultPrefix + r.data.choices.first()?.message?.content
+			return NEW_LINE + LINE_SEP + NEW_LINE + r.data.choices.first()?.message?.content
 		}).catch(e => {
 			console.error(e);
 			return "";
@@ -276,6 +230,7 @@ export default class AITools extends Plugin {
 				notice.hide();
 			}
 		}
+		notice.hide();
 		return new Promise(() => {});
 	}
 
@@ -389,29 +344,5 @@ class AIToolsSettingsTab extends PluginSettingTab {
 				this.plugin.settings.googleSearchKey = value;
 				await this.plugin.saveSettings();
 			}));
-
-		containerEl.createEl('h2', { text: 'Summarization Settings' });
-
-		new Setting(containerEl)
-			.setName('Summarization Prompt')
-			.setDesc('Define the prompt that is sent along with the text for summarization. This prompt guides the AI in generating the summary.')
-			.addTextArea(text => text
-				.setPlaceholder('')
-				.setValue(this.plugin.settings.summarizePrompt)
-				.onChange(async (value) => {
-					this.plugin.settings.summarizePrompt = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Summary Prefix')
-			.setDesc('Specify a prefix that will be added before the summary result. This can be used to clearly indicate the start of the AI-generated summary.')
-			.addTextArea(text => text
-				.setPlaceholder('')
-				.setValue(this.plugin.settings.summaryResultPrefix)
-				.onChange(async (value) => {
-					this.plugin.settings.summaryResultPrefix = value;
-					await this.plugin.saveSettings();
-				}));
 	}
 }
