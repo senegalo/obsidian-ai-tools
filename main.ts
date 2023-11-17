@@ -9,6 +9,7 @@ interface AIToolsSettings {
 	randomness: number;
 	model: string;
 	chatMessagesSeparator: string;
+	searchAndBrowse: boolean;
 	googleSearchCX: string;
 	googleSearchKey: string;
 }
@@ -23,6 +24,7 @@ const DEFAULT_SETTINGS: AIToolsSettings = {
 	randomness: 1,
 	model: "gpt-3.5-turbo",
 	chatMessagesSeparator: LINE_SEP,
+	searchAndBrowse: false,
 	googleSearchCX: "",
 	googleSearchKey: ""
 }
@@ -65,9 +67,10 @@ export default class AITools extends Plugin {
 		});
 
 		/** @todo make it dynamically go and fetch all internal plugins*/
-		this.internalBrowser = new InternalBrowser(this);
-		this.functions = this.functions.concat(this.internalBrowser.funcs());
-
+		if(this.settings.searchAndBrowse) {
+			this.internalBrowser = new InternalBrowser(this);
+			this.functions = this.functions.concat(this.internalBrowser.funcs());
+		}
 		// This adds the use selection as prompt
 		this.addCommand({
 			id: 'ai-tools-selection-as-prompt',
@@ -195,12 +198,16 @@ export default class AITools extends Plugin {
 		const messages = this.getMessages(content);
 		const openai = this.loadOpenAI();
 		const lineCount = editor.lineCount();
-
-		const response = await openai.createChatCompletion({
+		const request: any = {
 			model: this.settings.model,
-			messages: messages,
-			functions: this.functions
-		}).catch(reason => {
+			messages: messages
+		};
+
+		if(this.settings.searchAndBrowse && this.functions.length > 0) {
+			request.functions = this.functions
+		}
+
+		const response = await openai.createChatCompletion(request).catch(reason => {
 			console.error(reason.response);
 			const message = this.buildMessage("PluginError", JSON.stringify(reason.response.data))
 			editor.replaceRange(message, { line: lineCount, ch: 0 })
@@ -322,6 +329,24 @@ class AIToolsSettingsTab extends PluginSettingTab {
 
 
 		containerEl.createEl('h2', { text: 'Google Custom Search settings' });
+
+		new Setting(containerEl)
+		.setName('Enable Search & Browse')
+		.setDesc('Enable the search google and browse website capabilities')
+		.addToggle(toggle =>
+			toggle.setValue(this.plugin.settings.searchAndBrowse)
+			.onChange(async(value) => {
+				this.plugin.settings.searchAndBrowse = value;
+				if(value) {
+					this.plugin.internalBrowser = new InternalBrowser(this.plugin);
+					this.plugin.functions = this.plugin.functions.concat(this.plugin.internalBrowser.funcs());
+				} else {
+					this.plugin.functions = [];
+				}
+
+				await this.plugin.saveSettings();
+			})
+		);
 
 		new Setting(containerEl)
 		.setName('Search Engine ID (CX)')
