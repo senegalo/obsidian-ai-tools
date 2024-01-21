@@ -194,10 +194,18 @@ export default class AITools extends Plugin {
 
 	async getChatCompletion(editor: Editor, loops = 0): Promise<undefined> {
 		const notice = new Notice("AI Tools -> Processing...", 0);
-		const content = editor.getValue();
+		let content;
+		let line: number;
+		if(editor.somethingSelected()){
+			const editorSelection = editor.listSelections().first();
+			line = editorSelection.anchor.line > editorSelection.head.line ? editorSelection.anchor.line + 1 : editorSelection.head.line + 1;
+			content = editor.getSelection();
+		} else {
+			content = editor.getValue();
+			line = editor.lineCount();
+		}
 		const messages = this.getMessages(content);
 		const openai = this.loadOpenAI();
-		const lineCount = editor.lineCount();
 		const request: any = {
 			model: this.settings.model,
 			messages: messages
@@ -210,7 +218,7 @@ export default class AITools extends Plugin {
 		const response = await openai.createChatCompletion(request).catch(reason => {
 			console.error(reason.response);
 			const message = this.buildMessage("PluginError", JSON.stringify(reason.response.data))
-			editor.replaceRange(message, { line: lineCount, ch: 0 })
+			editor.replaceRange(message, { line: line, ch: 0 })
 			notice.hide();
 			return false;
 		});
@@ -225,14 +233,14 @@ export default class AITools extends Plugin {
 			const message = choice.message;
 				if (message?.function_call) {
 					const editorOutput = this.buildMessage("assistant", JSON.stringify(message.function_call));
-					editor.replaceRange(editorOutput, { line: lineCount, ch: 0 })
+					editor.replaceRange(editorOutput, { line: line, ch: 0 })
 					await this.handleFunctionCall(response.data, editor);
 					if (loops < 5) {
 						await this.getChatCompletion(editor, loops + 1);
 					}
 				} else if (message.content) {
 					const editorOutput = this.buildMessage("assistant", message.content);
-					editor.replaceRange(editorOutput, { line: lineCount, ch: 0 })
+					editor.replaceRange(editorOutput, { line: line, ch: 0 })
 				}
 				notice.hide();
 			}
